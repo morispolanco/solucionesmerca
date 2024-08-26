@@ -31,7 +31,7 @@ def crear_columna_info():
 
     1. Elija un problema de mercadeo de la lista predefinida o proponga su propio problema.
     2. Seleccione un servicio o industria.
-    3. Haga clic en "Obtener solución" para generar las respuestas en formato de texto o enlaces a vídeos de YouTube.
+    3. Haga clic en "Obtener solución" para generar las respuestas.
     4. Lea las soluciones y fuentes proporcionadas.
     5. Si lo desea, descargue un documento DOCX con toda la información.
 
@@ -171,7 +171,6 @@ with col2:
         doc.add_paragraph(respuestas)
 
         doc.add_heading('Fuentes', level=1)
-        # Limitar la lista de fuentes a las primeras 10
         for fuente in fuentes[:10]:
             doc.add_paragraph(fuente, style='List Bullet')
 
@@ -195,8 +194,6 @@ with col2:
     st.write("Selecciona un servicio o industria:")
     industria_seleccionada = st.selectbox("Servicio o Industria", servicios_industrias)
 
-    formato_seleccionado = st.selectbox("Selecciona el formato de solución:", ["Texto", "Enlaces a vídeos de YouTube"])
-
     if st.button("Obtener solución"):
         if problema and industria_seleccionada:
             with st.spinner("Buscando información y generando soluciones..."):
@@ -205,19 +202,21 @@ with col2:
                 contexto = "\n".join([item["snippet"] for item in resultados_busqueda.get("organic", [])])
                 fuentes = [item["link"] for item in resultados_busqueda.get("organic", [])]
 
-                if formato_seleccionado == "Texto":
-                    # Generar respuesta
-                    respuesta = generar_respuesta(problema, industria_seleccionada, contexto)
-                    st.subheader(f"Solución para el problema: {problema}")
-                    st.text(respuesta)
-                else:
-                    videos = buscar_videos_youtube(problema, industria_seleccionada)
-                    st.subheader(f"Vídeos relevantes para el problema: {problema}")
-                    for video in videos:
-                        st.markdown(f"[Video](https://www.youtube.com/watch?v={video})")
+                # Generar respuesta
+                respuesta = generar_respuesta(problema, industria_seleccionada, contexto)
 
-                # Botón para descargar el documento
-                doc = create_docx(problema, respuesta if formato_seleccionado == "Texto" else "", fuentes, videos if formato_seleccionado != "Texto" else [])
+                # Buscar videos de YouTube
+                videos = buscar_videos_youtube(problema, industria_seleccionada)
+
+                # Display the results
+                st.subheader(f"Solución para el problema: {problema}")
+                st.text(respuesta)
+                st.subheader("Vídeos relevantes")
+                for video in videos:
+                    st.markdown(f"[Video]({video})")
+
+                # Generate and download DOCX
+                doc = create_docx(problema, respuesta, fuentes, videos)
                 buffer = BytesIO()
                 doc.save(buffer)
                 buffer.seek(0)
