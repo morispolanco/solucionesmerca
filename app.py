@@ -5,7 +5,7 @@ from docx import Document
 from io import BytesIO
 
 # Set page configuration
-st.set_page_config(page_title="Diccionario de Problemas de Mercadeo", page_icon="📚", layout="wide")
+st.set_page_config(page_title="Problemas y soluciones de mercadeo", page_icon="📚", layout="wide")
 
 # Function to set the background color
 def set_background_color(color):
@@ -25,7 +25,7 @@ def crear_columna_info():
     st.markdown("""
     ### Sobre esta aplicación
 
-    Esta aplicación es un Diccionario de Problemas de Mercadeo. Permite a los usuarios obtener soluciones creativas a problemas de mercadeo para diversos servicios o industrias.
+    Esta aplicación es un elenco de problemas y soluciones de mercadeo. Permite a los usuarios obtener soluciones creativas a problemas de mercadeo para diversos servicios o industrias.
 
     ### Cómo usar la aplicación:
 
@@ -39,14 +39,12 @@ def crear_columna_info():
     **Moris Polanco**, 26 ag 2024
 
     ### Cómo citar esta aplicación (formato APA):
-    Polanco, M. (2024). *Diccionario de Problemas de Mercadeo* [Aplicación web]. https://solucionesmerca.streamlit.app
+    Polanco, M. (2024). *Problemas y soluciones de mercadeo* [Aplicación web]. https://solucionesmerca.streamlit.app
 
-    ---
-    **Nota:** Esta aplicación utiliza inteligencia artificial para generar respuestas basadas en información disponible en línea. Siempre verifique la información con fuentes académicas para un análisis más profundo.
     """)
 
 # Titles and Main Column
-st.title("Diccionario de Problemas de Mercadeo")
+st.title("Problemas y soluciones de mercadeo")
 
 # Set background color to light yellow
 set_background_color("#FFF9C4")  # Light yellow color code
