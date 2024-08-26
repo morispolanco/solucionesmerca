@@ -30,8 +30,8 @@ def crear_columna_info():
     ### Cómo usar la aplicación:
 
     1. Elija un problema de mercadeo de la lista predefinida o proponga su propio problema.
-    2. Seleccione uno o más servicios o industrias.
-    3. Haga clic en "Obtener solución" para generar las respuestas.
+    2. Seleccione un servicio o industria.
+    3. Haga clic en "Obtener solución" para generar las respuestas en formato de texto o enlaces a vídeos de YouTube.
     4. Lea las soluciones y fuentes proporcionadas.
     5. Si lo desea, descargue un documento DOCX con toda la información.
 
@@ -147,22 +147,37 @@ with col2:
         response = requests.post(url, headers=headers, data=payload)
         return response.json()['output']['choices'][0]['text'].strip()
 
-    def create_docx(problema, respuestas, fuentes):
+    def buscar_videos_youtube(problema, industria):
+        query = f"{problema} {industria} marketing"
+        url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=5&q={query}&key={st.secrets['YOUTUBE_API_KEY']}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            videos = []
+            for item in data.get('items', []):
+                video_url = f"https://www.youtube.com/watch?v={item['id']['videoId']}"
+                videos.append(video_url)
+            return videos
+        return []
+
+    def create_docx(problema, respuestas, fuentes, videos):
         doc = Document()
         doc.add_heading('Diccionario de Problemas de Mercadeo', 0)
 
         doc.add_heading('Problema', level=1)
         doc.add_paragraph(problema)
 
-        for industria, respuesta in respuestas.items():
-            doc.add_heading(f'Solución para la industria {industria}', level=2)
-            doc.add_paragraph(respuesta)
+        doc.add_heading('Solución', level=2)
+        doc.add_paragraph(respuestas)
 
         doc.add_heading('Fuentes', level=1)
-
         # Limitar la lista de fuentes a las primeras 10
         for fuente in fuentes[:10]:
             doc.add_paragraph(fuente, style='List Bullet')
+
+        doc.add_heading('Videos', level=1)
+        for video in videos:
+            doc.add_paragraph(video, style='List Bullet')
 
         doc.add_paragraph('\nNota: Este documento fue generado por un asistente de IA. Verifica la información con fuentes académicas para un análisis más profundo.')
 
@@ -177,44 +192,40 @@ with col2:
     else:
         problema = st.text_input("Ingresa tu propio problema de mercadeo:")
 
-    st.write("Selecciona uno o más servicios o industrias (máximo 5):")
-    industrias_seleccionadas = st.multiselect("Servicios o Industrias", servicios_industrias)
+    st.write("Selecciona un servicio o industria:")
+    industria_seleccionada = st.selectbox("Servicio o Industria", servicios_industrias)
 
-    if len(industrias_seleccionadas) > 5:
-        st.warning("Has seleccionado más de 5 servicios o industrias. Por favor, selecciona un máximo de 5.")
-    else:
-        if st.button("Obtener solución"):
-            if problema and industrias_seleccionadas:
-                with st.spinner("Buscando información y generando soluciones..."):
-                    respuestas, todas_fuentes = {}, []
+    formato_seleccionado = st.selectbox("Selecciona el formato de solución:", ["Texto", "Enlaces a vídeos de YouTube"])
 
-                    for industria in industrias_seleccionadas:
-                        # Buscar información relevante
-                        resultados_busqueda = buscar_informacion(problema, industria)
-                        contexto = "\n".join([item["snippet"] for item in resultados_busqueda.get("organic", [])])
-                        fuentes = [item["link"] for item in resultados_busqueda.get("organic", [])]
+    if st.button("Obtener solución"):
+        if problema and industria_seleccionada:
+            with st.spinner("Buscando información y generando soluciones..."):
+                # Buscar información relevante
+                resultados_busqueda = buscar_informacion(problema, industria_seleccionada)
+                contexto = "\n".join([item["snippet"] for item in resultados_busqueda.get("organic", [])])
+                fuentes = [item["link"] for item in resultados_busqueda.get("organic", [])]
 
-                        # Generar respuesta
-                        respuesta = generar_respuesta(problema, industria, contexto)
+                if formato_seleccionado == "Texto":
+                    # Generar respuesta
+                    respuesta = generar_respuesta(problema, industria_seleccionada, contexto)
+                    st.subheader(f"Solución para el problema: {problema}")
+                    st.text(respuesta)
+                else:
+                    videos = buscar_videos_youtube(problema, industria_seleccionada)
+                    st.subheader(f"Vídeos relevantes para el problema: {problema}")
+                    for video in videos:
+                        st.markdown(f"[Video](https://www.youtube.com/watch?v={video})")
 
-                        respuestas[industria] = respuesta
-                        todas_fuentes.extend(fuentes)
-
-                    # Mostrar las respuestas
-                    st.subheader(f"Soluciones para el problema: {problema}")
-                    for industria, respuesta in respuestas.items():
-                        st.markdown(f"**{industria}:** {respuesta}")
-
-                    # Botón para descargar el documento
-                    doc = create_docx(problema, respuestas, todas_fuentes)
-                    buffer = BytesIO()
-                    doc.save(buffer)
-                    buffer.seek(0)
-                    st.download_button(
-                        label="Descargar solución en DOCX",
-                        data=buffer,
-                        file_name=f"Solución_{problema.replace(' ', '_')}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-            else:
-                st.warning("Por favor, selecciona un problema y al menos un servicio o industria.")
+                # Botón para descargar el documento
+                doc = create_docx(problema, respuesta if formato_seleccionado == "Texto" else "", fuentes, videos if formato_seleccionado != "Texto" else [])
+                buffer = BytesIO()
+                doc.save(buffer)
+                buffer.seek(0)
+                st.download_button(
+                    label="Descargar solución en DOCX",
+                    data=buffer,
+                    file_name=f"Solución_{problema.replace(' ', '_')}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+        else:
+            st.warning("Por favor, selecciona un problema y un servicio o industria.")
